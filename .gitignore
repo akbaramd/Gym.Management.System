@@ -1,0 +1,56 @@
+﻿# Build results
+bin/
+obj/
+out/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Rider & JetBrains IDEs
+.idea/
+*.sln.iml
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Build Logs
+*.log
+*.tlog
+
+# Runtime Files
+*.dll
+*.exe
+*.pdb
+*.cache
+*.config
+*.log
+*.csproj.user
+
+# Generated files
+*.generated.cs
+*.designer.cs
+*.g.cs
+*.g.i.cs
+
+# Temporary files
+*.tmp
+*.temp
+*.diff
+*.patch
+~$*
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+desktop.ini
