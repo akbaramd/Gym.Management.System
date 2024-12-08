@@ -3,6 +3,12 @@ using Bonyan.EntityFrameworkCore;
 using Bonyan.Modularity;
 using Bonyan.Modularity.Abstractions;
 using GymManagementSystem.Application;
+using GymManagementSystem.Domain.IdentityContext.PermissionAggregate.Repositories;
+using GymManagementSystem.Domain.IdentityContext.RoleAggregate.Repositories;
+using GymManagementSystem.Domain.IdentityContext.SessionAggregate.Repositories;
+using GymManagementSystem.Domain.IdentityContext.UserAggregate.Repositories;
+using GymManagementSystem.Infrastructure.Data.Repositories;
+using GymManagementSystem.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,7 +35,13 @@ public class GymManagementSystemEntityFrameworkModule : BonModule
     public override Task OnConfigureAsync(BonConfigurationContext context)
     {
 
-        
+        context.Services.AddTransient<IUserRepository, UserRepository>();
+        context.Services.AddTransient<IRoleRepository, RoleRepository>();
+        context.Services.AddTransient<IPermissionRepository, PermissionRepository>();
+        context.Services.AddTransient<ISessionRepository,SessionRepository>();
+
+
+        context.Services.AddHostedService<IdentitySeedService>();
         
         // Configure the database context
         context.AddDbContext<GymManagementSystemDbContext>(c =>

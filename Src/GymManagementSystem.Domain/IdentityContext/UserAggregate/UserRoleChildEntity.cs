@@ -1,4 +1,5 @@
 ﻿using Bonyan.Layer.Domain.Entities;
+using GymManagementSystem.Domain.IdentityContext.RoleAggregate;
 
 namespace GymManagementSystem.Domain.IdentityContext.UserAggregate;
 
@@ -9,12 +10,12 @@ public class UserRoleChildEntity : BonEntity<Guid>
 {
   public  Guid UserId { get; private set; }
   public  Guid RoleId { get; private set; }
+  public RoleEntity Role { get; set; }
 
   private UserRoleChildEntity() { } // EF Core constructor
 
   public UserRoleChildEntity(Guid userId, Guid roleId)
   {
-    Id = Guid.NewGuid();
     UserId = userId;
     RoleId = roleId;
   }

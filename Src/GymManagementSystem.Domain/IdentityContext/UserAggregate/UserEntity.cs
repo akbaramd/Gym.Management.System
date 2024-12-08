@@ -5,6 +5,7 @@ using GymManagementSystem.Shared.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -19,6 +20,9 @@ public class UserEntity : BonFullAggregateRoot<Guid>
 {
     private readonly List<UserRoleChildEntity> _roles = [];
     private readonly List<UserTokensChildEntity> _tokens = [];
+
+    private readonly List<UserSessionChildEntity> _sessions = new();
+
     // Required properties for the User aggregate root.
     public string PhoneNumber { get; private set; }
     public string NationalCode { get; private set; }
@@ -26,27 +30,76 @@ public class UserEntity : BonFullAggregateRoot<Guid>
     public string LastName { get; private set; }
     public MediaVo? Avatar { get; private set; }
     public UserStatus Status { get; private set; } = UserStatus.PendingVerification;
-    private string PasswordHash { get; set; }
-    private string PasswordSalt { get; set; }
+    public string PasswordHash { get; private set; }
+    public string PasswordSalt { get; private set; }
+
+    public int FailedLoginAttempts { get; private set; }
+    public DateTime? BanUntil { get; private set; }
+
 
     // Navigation property for roles, encapsulated to ensure controlled manipulation.
     public IReadOnlyCollection<UserRoleChildEntity> Roles => _roles;
     public IReadOnlyCollection<UserTokensChildEntity> Tokens => _tokens;
+    public IReadOnlyCollection<UserSessionChildEntity> Sessions => _sessions;
 
-    protected UserEntity() { } // EF Core constructor
+    protected UserEntity()
+    {
+    } // EF Core constructor
 
-    public UserEntity(string phoneNumber, string nationalCode, string firstName, string lastName, MediaVo avatar, string password)
+    public UserEntity(string phoneNumber, string nationalCode, string firstName, string lastName,
+        string password)
     {
         Id = Guid.NewGuid();
         PhoneNumber = phoneNumber;
         NationalCode = nationalCode;
         FirstName = firstName;
         LastName = lastName;
-        Avatar = avatar;
         Status = UserStatus.PendingVerification;
 
         SetPassword(password); // Initializes password hash and salt during user creation.
         AddDomainEvent(new UserCreatedEvent(Id, PhoneNumber));
+    }
+
+
+    // Behavior for failed login attempts and bans
+    public void IncrementFailedAttempts()
+    {
+        FailedLoginAttempts++;
+        if (FailedLoginAttempts >= 5)
+        {
+            BanUntil = DateTime.UtcNow.AddMinutes(15);
+            Status = UserStatus.Suspended;
+        }
+    }
+
+    public void ResetFailedAttempts()
+    {
+        FailedLoginAttempts = 0;
+        BanUntil = null;
+        if (Status == UserStatus.Suspended)
+        {
+            Status = UserStatus.Active;
+        }
+    }
+
+    public bool IsBanned() => BanUntil.HasValue && BanUntil > DateTime.UtcNow;
+
+    // Session Management
+    public void AddSession(Guid sessionId)
+    {
+        if (_sessions.Any(s => s.SessionId == sessionId))
+            throw new InvalidOperationException("Session already exists for this user.");
+
+        var childSession = new UserSessionChildEntity(Id, sessionId);
+        _sessions.Add(childSession);
+    }
+    public void RemoveSession(Guid sessionId)
+    {
+        var session = _sessions.SingleOrDefault(s => s.SessionId == sessionId);
+        if (session == null)
+            throw new InvalidOperationException($"Session with ID '{sessionId}' does not exist.");
+
+        _sessions.Remove(session);
     }
 
     /// <summary>
@@ -89,7 +142,7 @@ public class UserEntity : BonFullAggregateRoot<Guid>
 
         FirstName = firstName;
         LastName = lastName;
-  
+
         AddDomainEvent(new UserProfileUpdatedEvent(Id, firstName, lastName, Avatar));
     }
 
@@ -181,18 +234,23 @@ public class UserEntity : BonFullAggregateRoot<Guid>
         PasswordHash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
     }
 
-    
+
     /// <summary>
     /// Adds a new token to the user.
     /// </summary>
-    public void AddToken(string type, string value)
+    public void SetToken(string type, string value)
     {
-      if (_tokens.Any(t => t.Type == type && t.Value == value))
-        throw new InvalidOperationException($"Token of type '{type}' with the same value already exists.");
-
-      var token = new UserTokensChildEntity(Id, type, value);
-      _tokens.Add(token);
-
+        var token = _tokens.SingleOrDefault(t => t.Type == type);
+        if (token == null)
+        {
+            token = new UserTokensChildEntity(Id, type, value);
+            _tokens.Add(token);
+            return;
+        }
+        else
+        {
+            token.Update(type, value);
+        }
     }
 
     /// <summary>
@@ -200,11 +258,11 @@ public class UserEntity : BonFullAggregateRoot<Guid>
     /// </summary>
     public void RemoveToken(string type, string value)
     {
-      var token = _tokens.SingleOrDefault(t => t.Type == type && t.Value == value);
-      if (token == null)
-        throw new InvalidOperationException($"Token of type '{type}' with the given value does not exist.");
+        var token = _tokens.SingleOrDefault(t => t.Type == type && t.Value == value);
+        if (token == null)
+            throw new InvalidOperationException($"Token of type '{type}' with the given value does not exist.");
 
-      _tokens.Remove(token);
+        _tokens.Remove(token);
     }
 
     /// <summary>
@@ -212,14 +270,13 @@ public class UserEntity : BonFullAggregateRoot<Guid>
     /// </summary>
     public void RemoveAllTokens(string type)
     {
-      var tokensToRemove = _tokens.Where(t => t.Type == type).ToList();
+        var tokensToRemove = _tokens.Where(t => t.Type == type).ToList();
 
-      if (!tokensToRemove.Any())
-        throw new InvalidOperationException($"No tokens of type '{type}' exist.");
+        if (!tokensToRemove.Any())
+            throw new InvalidOperationException($"No tokens of type '{type}' exist.");
 
-      foreach (var token in tokensToRemove)
-        _tokens.Remove(token);
-
+        foreach (var token in tokensToRemove)
+            _tokens.Remove(token);
     }
 
     /// <summary>
@@ -227,6 +284,6 @@ public class UserEntity : BonFullAggregateRoot<Guid>
     /// </summary>
     public bool HasToken(string type, string value)
     {
-      return _tokens.Any(t => t.Type == type && t.Value == value);
+        return _tokens.Any(t => t.Type == type && t.Value == value);
     }
 }

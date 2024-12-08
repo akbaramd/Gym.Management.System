@@ -1,5 +1,4 @@
 ﻿using Bonyan.Modularity.Abstractions;
-using GymManagementSystem.Application;
 
 namespace GymManagementSystem.Application.Tests;
 

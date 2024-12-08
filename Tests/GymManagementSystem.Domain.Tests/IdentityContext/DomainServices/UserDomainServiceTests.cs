@@ -23,7 +23,7 @@ public class UserDomainServiceTests
   }
 
   private UserEntity CreateDefaultUser() =>
-    new UserEntity("1234567890", "123456789", "John", "Doe", DefaultMediaVo,"Aa@123456");
+    new UserEntity("1234567890", "123456789", "John", "Doe","Aa@123456");
 
   private List<RoleEntity> CreateDefaultRoles() =>
     new List<RoleEntity>
@@ -133,7 +133,7 @@ public class UserDomainServiceTests
     _userRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<UserEntity>(), It.IsAny<bool>()))
       .Returns(Task.CompletedTask);
 
-    var result = await _userDomainService.AssignRolesAsync(user.Id, "Admin", "Editor");
+    var result = await _userDomainService.AssignRolesAsync(user, "Admin", "Editor");
 
     Assert.True(result.IsSuccess);
     Assert.Contains(user.Roles, r => r.RoleId == roles[0].Id);
@@ -153,7 +153,7 @@ public class UserDomainServiceTests
     _roleRepositoryMock.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<RoleEntity, bool>>>()))
       .ReturnsAsync(roles);
 
-    var result = await _userDomainService.AssignRolesAsync(user.Id, "NonExistentRole");
+    var result = await _userDomainService.AssignRolesAsync(user, "NonExistentRole");
 
     Assert.False(result.IsSuccess);
     _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<UserEntity>(), true), Times.Never);

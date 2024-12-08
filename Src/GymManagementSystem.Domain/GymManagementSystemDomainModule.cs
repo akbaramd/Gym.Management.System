@@ -25,6 +25,8 @@ public class GymManagementSystemDomainModule : BonModule
     public override Task OnConfigureAsync(BonConfigurationContext context)
     {
       context.Services.AddTransient<UserDomainService>();
+      context.Services.AddTransient<AuthDomainService>();
+      context.Services.AddTransient<RoleDomainService>();
       return base.OnConfigureAsync(context);
     }
 }

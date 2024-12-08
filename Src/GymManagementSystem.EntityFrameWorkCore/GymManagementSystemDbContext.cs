@@ -1,7 +1,10 @@
-﻿using Bonyan.EntityFrameworkCore;
+﻿using System.Reflection;
+using Bonyan.EntityFrameworkCore;
 using Bonyan.EntityFrameworkCore.Abstractions;
-using GymManagementSystem.Domain.Authors;
-using GymManagementSystem.Domain.Books;
+using GymManagementSystem.Domain.IdentityContext.PermissionAggregate;
+using GymManagementSystem.Domain.IdentityContext.RoleAggregate;
+using GymManagementSystem.Domain.IdentityContext.SessionAggregate;
+using GymManagementSystem.Domain.IdentityContext.UserAggregate;
 using Microsoft.EntityFrameworkCore;
 
 namespace GymManagementSystem.Infrastructure.Data;
@@ -16,33 +19,18 @@ public class GymManagementSystemDbContext : BonDbContext<GymManagementSystemDbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);
-
-        // ConfigureByConvention: From Bonyan.EntityFrameworkCore to apply default conventions of the domain.
-        modelBuilder.Entity<BookEntity>().ConfigureByConvention();
-        modelBuilder.Entity<AuthorEntity>().ConfigureByConvention();
-
-
-        // Configures the relationship between BookEntity and AuthorEntity.
-        modelBuilder.Entity<BookEntity>()
-            .HasOne(book => book.AuthorEntity) // A Book is related to an Author.
-            .WithMany() // An Author can have multiple Books.
-            .HasForeignKey(book => book.AuthorId); // ForeignKey is AuthorId in BookEntity.
-        
-        // Configure BookEntity's owned value object
-        modelBuilder.Entity<BookEntity>().OwnsOne(
-            book => book.Detail,
-            detail =>
-            {
-                detail.Property(d => d.Author).HasColumnName("Author");
-                detail.Property(d => d.PublishedDate).HasColumnName("PublishedDate");
-                detail.Property(d => d.ISBN).HasColumnName("ISBN");
-                detail.Property(d => d.Pages).HasColumnName("Pages");
-            });
-
     }
 
-    // DbSet properties for domain entities.
-    public DbSet<BookEntity> Books { get; set; }
-    public DbSet<AuthorEntity> Authors { get; set; }
+    public DbSet<UserEntity> Users { get; set; }
+    public DbSet<UserRoleChildEntity> UserRoles { get; set; }
+    public DbSet<UserSessionChildEntity> UserSessions { get; set; }
+    public DbSet<UserTokensChildEntity> UserTokens { get; set; }
+    public DbSet<RoleEntity> Roles { get; set; }
+    public DbSet<RolePermissionChildEntity> RolePermissions { get; set; }
+    public DbSet<PermissionEntity> Permissions { get; set; }
+    public DbSet<SessionEntity> Sessions { get; set; }
+    
+
 }

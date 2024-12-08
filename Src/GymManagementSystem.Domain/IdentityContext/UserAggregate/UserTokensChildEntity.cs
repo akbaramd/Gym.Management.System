@@ -16,9 +16,14 @@ public class UserTokensChildEntity : BonEntity<Guid>
 
   public UserTokensChildEntity(Guid userId, string type, string value)
   {
-    Id = Guid.NewGuid();
     UserId = userId;
     Type = type ?? throw new ArgumentNullException(nameof(type), "Token type cannot be null.");
     Value = value ?? throw new ArgumentNullException(nameof(value), "Token value cannot be null.");
+  }
+
+  public void Update(string type, string key)
+  {
+    this.Type = type;
+    this.Value = Value;
   }
 }

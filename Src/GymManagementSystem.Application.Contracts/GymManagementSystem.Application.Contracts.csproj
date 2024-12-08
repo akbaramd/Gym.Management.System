@@ -14,4 +14,8 @@
       <ProjectReference Include="..\GymManagementSystem.Domain\GymManagementSystem.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Features\Auth\" />
+    </ItemGroup>
+
 </Project>

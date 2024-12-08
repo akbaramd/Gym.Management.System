@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bonyan.Layer.Domain.DomainService;
+using Bonyan.Layer.Domain.Services;
 using GymManagementSystem.Domain.IdentityContext.PermissionAggregate.Repositories;
 using GymManagementSystem.Domain.IdentityContext.RoleAggregate;
 using GymManagementSystem.Domain.IdentityContext.RoleAggregate.Repositories;
@@ -9,7 +10,7 @@ namespace GymManagementSystem.Domain.IdentityContext.DomainService;
 /// <summary>
 /// Domain service for handling role-related operations.
 /// </summary>
-public class RoleDomainService
+public class RoleDomainService: BonDomainService
 {
     private readonly IRoleRepository _roleRepository;
     private readonly IPermissionRepository _permissionRepository;

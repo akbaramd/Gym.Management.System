@@ -5,7 +5,10 @@ using Bonyan.AspNetCore.Swagger;
 using Bonyan.Layer.Application.Dto;
 using Bonyan.Layer.Application.Services;
 using Bonyan.Layer.Domain.Repository.Abstractions;
+using Bonyan.Mediators;
 using Bonyan.Modularity;
+using GymManagementSystem.Application;
+using GymManagementSystem.Application.UserCases.Authentication.Login;
 using GymManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,6 +33,7 @@ public class GymManagementSystemWebApiModule : BonWebModule
         DependOn<BonAspnetCoreSwaggerModule>();
 
         // Project-specific modules
+        DependOn<GymManagementSystemApplicationModule>();
         DependOn<GymManagementSystemEntityFrameworkModule>();
     }
 
@@ -39,6 +43,13 @@ public class GymManagementSystemWebApiModule : BonWebModule
         return base.OnConfigureAsync(context);
     }
 
+    public override async Task OnPostInitializeAsync(BonInitializedContext context)
+    {
+        var mediator = context.GetRequireService<IBonMediator>();
+
+        var res = await mediator.SendAsync<AuthLoginCommand,ServiceResult<AuthLoginResult>>(new AuthLoginCommand("0987654321", "Admin@123456", "firefox", "192.168.1.1"));
+        await base.OnPostInitializeAsync(context);
+    }
 
     public override Task OnPostApplicationAsync(BonWebApplicationContext context)
     {

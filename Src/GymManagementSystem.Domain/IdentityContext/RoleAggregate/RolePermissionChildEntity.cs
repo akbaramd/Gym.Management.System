@@ -1,4 +1,5 @@
 ﻿using Bonyan.Layer.Domain.Entities;
+using GymManagementSystem.Domain.IdentityContext.PermissionAggregate;
 
 namespace GymManagementSystem.Domain.IdentityContext.RoleAggregate;
 
@@ -8,13 +9,13 @@ namespace GymManagementSystem.Domain.IdentityContext.RoleAggregate;
 public class RolePermissionChildEntity : BonEntity<Guid>
 {
   public  Guid PermissionId { get; private set; }
+  public  PermissionEntity Permission { get; private set; }
   public  Guid RoleId { get; private set; }
 
   private RolePermissionChildEntity() { } // EF Core constructor
 
   public RolePermissionChildEntity(Guid roleId, Guid permissionId)
   {
-    Id = Guid.NewGuid();
     RoleId = roleId;
     PermissionId = permissionId;
   }

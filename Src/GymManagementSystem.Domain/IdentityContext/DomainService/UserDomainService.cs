@@ -9,13 +9,14 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Bonyan.Layer.Domain.Services;
 
 namespace GymManagementSystem.Domain.IdentityContext.DomainService;
 
 /// <summary>
 /// Domain service for user-related operations.
 /// </summary>
-public class UserDomainService
+public class UserDomainService : BonDomainService
 {
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
@@ -45,12 +46,13 @@ public class UserDomainService
 
         if (await _userRepository.FindByPhoneNumberAsync(user.PhoneNumber) != null)
           return BonDomainResult<UserEntity>.Failure("A user with this phone number already exists.");
-        await _userRepository.AddAsync(user, true);
+       var res= await _userRepository.AddAsync(user, true);
 
         // result
-        return BonDomainResult<UserEntity>.Success(user);
+        return BonDomainResult<UserEntity>.Success(res);
     }
 
+    
     /// <summary>
     /// Updates an existing user with normalization, validation, and cascading rules.
     /// </summary>
@@ -80,15 +82,8 @@ public class UserDomainService
     /// </summary>
     /// <param name="userId">The ID of the user.</param>
     /// <param name="roleNames">The names of the roles to assign.</param>
-    public async Task<BonDomainResult<UserEntity>> AssignRolesAsync(Guid userId, params string[] roleNames)
+    public async Task<BonDomainResult<UserEntity>> AssignRolesAsync(UserEntity user, params string[] roleNames)
     {
-        if (roleNames.Length == 0)
-            return BonDomainResult<UserEntity>.Failure("Role names cannot be null or empty.");
-
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
-            return BonDomainResult<UserEntity>.Failure("User not found.");
-
         // Normalize role names
         var normalizedRoleNames = roleNames.Select(NormalizeText).Distinct().ToArray();
 
@@ -109,6 +104,25 @@ public class UserDomainService
         // Update user
         await _userRepository.UpdateAsync(user, true);
         return BonDomainResult<UserEntity>.Success(user);
+    }
+    /// <summary>
+    /// Retrieves the roles assigned to a user.
+    /// </summary>
+    /// <param name="userId">The ID of the user.</param>
+    /// <returns>A domain result containing a list of role names.</returns>
+    public async Task<BonDomainResult<List<string>>> GetRolesAsync(UserEntity user)
+    {
+        // Fetch all roles for mapping
+        var allRoles = await _roleRepository.FindAsync(x => true);
+
+        // Get role names for the user's assigned roles
+        var userRoleNames = user.Roles
+            .Select(userRole => allRoles.FirstOrDefault(role => role.Id == userRole.RoleId)?.Name)
+            .Where(roleName => !string.IsNullOrEmpty(roleName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return BonDomainResult<List<string>>.Success(userRoleNames);
     }
 
     /// <summary>
@@ -271,5 +285,14 @@ public class UserDomainService
 
         await _userRepository.DeleteAsync(user, true);
         return BonDomainResult<bool>.Success(true);
+    }
+
+    public async Task<BonDomainResult<UserEntity>> GetUserByPhoneNumberAsync(string mobileNumber)
+    {
+        var user = await _userRepository.FindByPhoneNumberAsync(mobileNumber);
+        if (user == null)
+            return BonDomainResult<UserEntity>.Failure("User not found.");
+
+        return BonDomainResult<UserEntity>.Success(user);
     }
 }

@@ -4,8 +4,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymManagementSystem.Domain"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymManagementSystem.Application", "Src\GymManagementSystem.Application\GymManagementSystem.Application.csproj", "{E37ED83A-EDA3-45FD-A09A-65DCD33F057E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymManagementSystem.Application.Contracts", "Src\GymManagementSystem.Application.Contracts\GymManagementSystem.Application.Contracts.csproj", "{6812BA7E-3687-4464-9103-6F1B2E9DD0C4}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymManagementSystem.EntityFrameWorkCore", "Src\GymManagementSystem.EntityFrameWorkCore\GymManagementSystem.EntityFrameWorkCore.csproj", "{274CB9DE-5957-4810-BC95-7E1FEF4CA78F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymManagementSystem.Shared", "Src\GymManagementSystem.Shared\GymManagementSystem.Shared.csproj", "{622D7C0A-0A69-4920-A13E-A3F17F504D29}"
@@ -34,10 +32,6 @@ Global
 		{E37ED83A-EDA3-45FD-A09A-65DCD33F057E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E37ED83A-EDA3-45FD-A09A-65DCD33F057E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E37ED83A-EDA3-45FD-A09A-65DCD33F057E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6812BA7E-3687-4464-9103-6F1B2E9DD0C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6812BA7E-3687-4464-9103-6F1B2E9DD0C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6812BA7E-3687-4464-9103-6F1B2E9DD0C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6812BA7E-3687-4464-9103-6F1B2E9DD0C4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{274CB9DE-5957-4810-BC95-7E1FEF4CA78F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{274CB9DE-5957-4810-BC95-7E1FEF4CA78F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{274CB9DE-5957-4810-BC95-7E1FEF4CA78F}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -62,7 +56,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{1A86689E-A32D-4A90-A837-FB41FC177828} = {1A24F622-3AAF-461F-8168-8579948F1A48}
 		{E37ED83A-EDA3-45FD-A09A-65DCD33F057E} = {1A24F622-3AAF-461F-8168-8579948F1A48}
-		{6812BA7E-3687-4464-9103-6F1B2E9DD0C4} = {1A24F622-3AAF-461F-8168-8579948F1A48}
 		{274CB9DE-5957-4810-BC95-7E1FEF4CA78F} = {1A24F622-3AAF-461F-8168-8579948F1A48}
 		{622D7C0A-0A69-4920-A13E-A3F17F504D29} = {1A24F622-3AAF-461F-8168-8579948F1A48}
 		{D082A14B-E595-4B5C-92A8-01DCDE4B5A11} = {1A24F622-3AAF-461F-8168-8579948F1A48}
