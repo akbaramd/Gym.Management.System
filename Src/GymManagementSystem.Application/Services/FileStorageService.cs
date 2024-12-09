@@ -1,4 +1,6 @@
-﻿public class FileStorageService : IFileStorageService
+﻿namespace GymManagementSystem.Application.Services;
+
+public class FileStorageService : IFileStorageService
 {
   private readonly IWebHostEnvironment _env;
 

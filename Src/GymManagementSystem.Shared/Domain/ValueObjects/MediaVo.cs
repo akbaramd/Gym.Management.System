@@ -93,7 +93,7 @@ public class MediaVo : BonValueObject
       "/default/avatar.jpg",
       "/default/avatar.jpg",
       ".jpg",
-      0
+      8007
     );
   }
 }

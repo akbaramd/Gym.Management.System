@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -7,25 +6,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Bonyan.Layer.Application" Version="1.2.4"/>
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0"/>
+        <PackageReference Include="Bonyan.Layer.Application" Version="1.2.4" />
+        <PackageReference Include="Bonyan.AspNetCore" Version="1.2.4" />
+            <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\GymManagementSystem.Domain\GymManagementSystem.Domain.csproj"/>
+        <ProjectReference Include="..\GymManagementSystem.Domain\GymManagementSystem.Domain.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="UserCases\Users\" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Microsoft.AspNetCore.Hosting.Abstractions">
-        <HintPath>C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\8.0.8\Microsoft.AspNetCore.Hosting.Abstractions.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.AspNetCore.Http.Features">
-        <HintPath>C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\8.0.8\Microsoft.AspNetCore.Http.Features.dll</HintPath>
-      </Reference>
-    </ItemGroup>
-
 </Project>

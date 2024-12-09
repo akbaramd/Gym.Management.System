@@ -24,7 +24,7 @@ public class GetProfileQueryHandler : IBonQueryHandler<GetProfileQuery, ServiceR
       LastName = user.LastName,
       PhoneNumber = user.PhoneNumber,
       NationalCode = user.NationalCode,
-      Avatar = user.Avatar?.WebPath ?? "/images/default.png"
+      Avatar = user.Avatar?.WebPath ?? MediaVo.Default().WebPath
     };
 
     return ServiceResult<UserProfileResult>.Success(profile);
