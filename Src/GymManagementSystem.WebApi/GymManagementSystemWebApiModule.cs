@@ -1,16 +1,5 @@
-﻿using Bonyan.AspNetCore;
-using Bonyan.AspNetCore.MultiTenant;
-using Bonyan.AspNetCore.Mvc;
-using Bonyan.AspNetCore.Swagger;
-using Bonyan.Layer.Application.Dto;
-using Bonyan.Layer.Application.Services;
-using Bonyan.Layer.Domain.Repository.Abstractions;
-using Bonyan.Mediators;
-using Bonyan.Modularity;
-using GymManagementSystem.Application;
-using GymManagementSystem.Application.UserCases.Authentication.Login;
-using GymManagementSystem.Infrastructure.Data;
-using Microsoft.AspNetCore.Mvc;
+﻿using GymManagementSystem.Presentation.WebApi.Endpoints;
+using GymManagementSystem.Presentation.WebApi.OperationFilter;
 
 namespace GymManagementSystem.Presentation.WebApi;
 
@@ -23,13 +12,8 @@ public class GymManagementSystemWebApiModule : BonWebModule
     public GymManagementSystemWebApiModule()
     {
         // External dependencies
-
-        // BonAspNetCoreMvcModule:
-        // This module provides core ASP.NET Core MVC functionalities, 
-        // such as routing, controllers, and middleware setup.
         DependOn<BonAspNetCoreMvcModule>();
         DependOn<BonAspNetCoreMultiTenantModule>();
-        // It also supports Swagger integration for API documentation.
         DependOn<BonAspnetCoreSwaggerModule>();
 
         // Project-specific modules
@@ -40,21 +24,113 @@ public class GymManagementSystemWebApiModule : BonWebModule
     public override Task OnConfigureAsync(BonConfigurationContext context)
     {
         context.Services.AddEndpointsApiExplorer();
+
+        // Configure services
+        var configuration = context.GetRequireService<IConfiguration>();
+
+        var jwtSettings = configuration.GetSection("JwtSettings");
+        var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey is not configured.");
+
+        PreConfigure<SwaggerGenOptions>(options =>
+        {
+            // Add Security Definition for Bearer
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                Name = "Authorization",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.ApiKey,
+                Scheme = "Bearer"
+            });
+
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+              {
+                new OpenApiSecurityScheme
+                {
+                  Reference = new OpenApiReference
+                  {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                  }
+                },
+                Array.Empty<string>()
+              },
+              {
+                new OpenApiSecurityScheme
+                {
+                  Reference = new OpenApiReference
+                  {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                  }
+                },
+                Array.Empty<string>()
+              }
+            });
+            options.OperationFilter<SessionHeaderOperationFilter>();
+        });
+
+        context.Services.AddAuthentication("Bearer")
+            .AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtSettings["Issuer"],
+                    ValidAudience = jwtSettings["Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+                    ClockSkew = TimeSpan.Zero // Disable clock skew
+                };
+            });
+
+        context.Services.AddAuthorization();
+
+        // Add CORS policy to allow any origin, any method, any header
+        context.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", builder =>
+            {
+                builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            });
+        });
+
+        context.Services.AddScoped<SessionAuthorizationMiddleware>(); // Register middleware for dependency injection
+
         return base.OnConfigureAsync(context);
     }
 
-    public override async Task OnPostInitializeAsync(BonInitializedContext context)
+    public override Task OnApplicationAsync(BonWebApplicationContext context)
     {
-        var mediator = context.GetRequireService<IBonMediator>();
+        var app = context.Application;
 
-        var res = await mediator.SendAsync<AuthLoginCommand,ServiceResult<AuthLoginResult>>(new AuthLoginCommand("0987654321", "Admin@123456", "firefox", "192.168.1.1"));
-        await base.OnPostInitializeAsync(context);
+        // Use CORS
+        app.UseCors("AllowAll");
+
+        // Add middleware
+        app.UseHttpsRedirection();
+        app.UseBonyanExceptionHandling();
+        app.UseAuthentication(); // Authenticate user based on token
+        app.UseAuthorization(); // Authorize user based on roles and policies
+        app.UseMiddleware<SessionAuthorizationMiddleware>(); // Validate session state and activity
+        app.UseAntiforgery();
+        app.UseStaticFiles();
+
+        return base.OnApplicationAsync(context);
     }
 
     public override Task OnPostApplicationAsync(BonWebApplicationContext context)
     {
-        context.Application.UseHttpsRedirection();
+        var app = context.Application;
+
+        app.MapAuthenticationEndpoints();
+
         return base.OnPostApplicationAsync(context);
     }
-
 }

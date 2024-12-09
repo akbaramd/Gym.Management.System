@@ -1,4 +1,5 @@
-﻿using GymManagementSystem.Domain.IdentityContext.DomainService;
+﻿using System.Linq.Expressions;
+using GymManagementSystem.Domain.IdentityContext.DomainService;
 using GymManagementSystem.Domain.IdentityContext.RoleAggregate;
 using GymManagementSystem.Domain.IdentityContext.RoleAggregate.Repositories;
 using GymManagementSystem.Domain.IdentityContext.UserAggregate;
@@ -10,10 +11,10 @@ namespace GymManagementSystem.Domain.Tests.IdentityContext.DomainServices;
 
 public class UserDomainServiceTests
 {
-  private readonly Mock<IUserRepository> _userRepositoryMock;
+  private static readonly MediaVo DefaultMediaVo = new("default.jpg", "default.jpg", ".jpeg", 1024);
   private readonly Mock<IRoleRepository> _roleRepositoryMock;
   private readonly UserDomainService _userDomainService;
-  private static readonly MediaVo DefaultMediaVo = new MediaVo("default.jpg", "default.jpg", ".jpeg", 1024);
+  private readonly Mock<IUserRepository> _userRepositoryMock;
 
   public UserDomainServiceTests()
   {
@@ -22,15 +23,15 @@ public class UserDomainServiceTests
     _userDomainService = new UserDomainService(_userRepositoryMock.Object, _roleRepositoryMock.Object);
   }
 
-  private UserEntity CreateDefaultUser() =>
-    new UserEntity("1234567890", "123456789", "John", "Doe","Aa@123456");
+  private UserEntity CreateDefaultUser()
+  {
+    return new UserEntity("1234567890", "123456789", "John", "Doe", "Aa@123456");
+  }
 
-  private List<RoleEntity> CreateDefaultRoles() =>
-    new List<RoleEntity>
-    {
-      new RoleEntity("Admin", "Administrator"),
-      new RoleEntity("Editor", "Content Editor")
-    };
+  private List<RoleEntity> CreateDefaultRoles()
+  {
+    return new List<RoleEntity> { new("Admin", "Administrator"), new("Editor", "Content Editor") };
+  }
 
   // --- CREATE ASYNC ---
   [Fact]
@@ -127,7 +128,7 @@ public class UserDomainServiceTests
     _userRepositoryMock.Setup(r => r.GetByIdAsync(user.Id))
       .ReturnsAsync(user);
 
-    _roleRepositoryMock.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<RoleEntity, bool>>>()))
+    _roleRepositoryMock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<RoleEntity, bool>>>()))
       .ReturnsAsync(roles);
 
     _userRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<UserEntity>(), It.IsAny<bool>()))
@@ -136,8 +137,8 @@ public class UserDomainServiceTests
     var result = await _userDomainService.AssignRolesAsync(user, "Admin", "Editor");
 
     Assert.True(result.IsSuccess);
-    Assert.Contains(user.Roles, r => r.RoleId == roles[0].Id);
-    Assert.Contains(user.Roles, r => r.RoleId == roles[1].Id);
+    Assert.Contains(user.UserRoles, r => r.RoleId == roles[0].Id);
+    Assert.Contains(user.UserRoles, r => r.RoleId == roles[1].Id);
     _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<UserEntity>(), true), Times.Once);
   }
 
@@ -150,7 +151,7 @@ public class UserDomainServiceTests
     _userRepositoryMock.Setup(r => r.GetByIdAsync(user.Id))
       .ReturnsAsync(user);
 
-    _roleRepositoryMock.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<RoleEntity, bool>>>()))
+    _roleRepositoryMock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<RoleEntity, bool>>>()))
       .ReturnsAsync(roles);
 
     var result = await _userDomainService.AssignRolesAsync(user, "NonExistentRole");
@@ -207,6 +208,4 @@ public class UserDomainServiceTests
     Assert.Equal("User not found.", result.ErrorMessage);
     _userRepositoryMock.Verify(r => r.DeleteAsync(It.IsAny<UserEntity>(), true), Times.Never);
   }
-
-
 }

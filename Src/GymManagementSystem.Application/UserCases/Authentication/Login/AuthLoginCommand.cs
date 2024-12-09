@@ -1,38 +1,36 @@
-﻿using Bonyan.Layer.Application.Services;
-using Bonyan.Mediators;
+﻿using Newtonsoft.Json;
 
 namespace GymManagementSystem.Application.UserCases.Authentication.Login;
 
 /// <summary>
-/// Command for authenticating a user.
+///   Command for authenticating a user.
 /// </summary>
 public class AuthLoginCommand : IBonCommand<ServiceResult<AuthLoginResult>>
 {
-    public AuthLoginCommand(string mobileNumber, string password, string browser, string ipAddress)
-    {
-        MobileNumber = mobileNumber ?? throw new ArgumentNullException(nameof(mobileNumber));
-        Password = password ?? throw new ArgumentNullException(nameof(password));
-        Browser = browser ?? throw new ArgumentNullException(nameof(browser));
-        IpAddress = ipAddress ?? throw new ArgumentNullException(nameof(ipAddress));
-    }
 
-    /// <summary>
-    /// The user's mobile number.
-    /// </summary>
-    public string MobileNumber { get; }
 
-    /// <summary>
-    /// The user's password.
-    /// </summary>
-    public string Password { get; }
+  /// <summary>
+  ///   The user's mobile number.
+  /// </summary>
+  public required string MobileNumber { get; set; }
 
-    /// <summary>
-    /// The browser information used by the user.
-    /// </summary>
-    public string Browser { get; }
+  /// <summary>
+  ///   The user's password.
+  /// </summary>
+  public required string Password { get; set; }
 
-    /// <summary>
-    /// The IP address of the user.
-    /// </summary>
-    public string IpAddress { get; }
+  
+  [System.Text.Json.Serialization.JsonIgnore]
+  [JsonIgnore]
+  /// <summary>
+  ///   The browser information used by the user.
+  /// </summary>
+  public  string? Device { set;get; }
+
+  [System.Text.Json.Serialization.JsonIgnore]
+  [JsonIgnore]
+  /// <summary>
+  ///   The IP address of the user.
+  /// </summary>
+  public  string? IpAddress { set;get; }
 }

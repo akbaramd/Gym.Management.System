@@ -1,17 +1,12 @@
-﻿using Bonyan.Layer.Domain.Entities;
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+﻿#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 namespace GymManagementSystem.Domain.IdentityContext.UserAggregate;
 
 /// <summary>
-/// Child entity for user-token relationship.
+///   Child entity for user-token relationship.
 /// </summary>
 public class UserTokensChildEntity : BonEntity<Guid>
 {
-  public Guid UserId { get; private set; }
-  public string Type { get; private set; }
-  public string Value { get; private set; }
-
   protected UserTokensChildEntity() { } // EF Core constructor
 
   public UserTokensChildEntity(Guid userId, string type, string value)
@@ -21,9 +16,13 @@ public class UserTokensChildEntity : BonEntity<Guid>
     Value = value ?? throw new ArgumentNullException(nameof(value), "Token value cannot be null.");
   }
 
+  public Guid UserId { get; private set; }
+  public string Type { get; private set; }
+  public string Value { get; private set; }
+
   public void Update(string type, string key)
   {
-    this.Type = type;
-    this.Value = Value;
+    Type = type;
+    Value = Value;
   }
 }

@@ -1,69 +1,86 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using GymManagementSystem.Domain.IdentityContext.UserAggregate;
-using Microsoft.Extensions.Configuration;
-using System.Security.Claims;
-using System.Text;
-using GymManagementSystem.Domain.IdentityContext.DomainService;
-using Microsoft.IdentityModel.Tokens;
+﻿namespace GymManagementSystem.Application.Services;
 
-namespace GymManagementSystem.Application.Services
+/// <summary>
+/// Service for generating and validating JWT tokens.
+/// </summary>
+public class JwtService
 {
-    public class JwtService
+    private readonly string _audience;
+    private readonly string _issuer;
+    private readonly string _secretKey;
+
+    public JwtService(IConfiguration configuration)
     {
-        private readonly string _secretKey;
-        private readonly string _issuer;
-        private readonly string _audience;
-        private readonly UserDomainService _userDomainService;
-        public JwtService(IConfiguration configuration, UserDomainService userDomainService)
+        var jwtSettings = configuration.GetSection("JwtSettings");
+        _secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey is not configured.");
+        _issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT Issuer is not configured.");
+        _audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT Audience is not configured.");
+    }
+
+    /// <summary>
+    /// Generates an access token with the specified user and session details.
+    /// </summary>
+    public string GenerateAccessToken(IEnumerable<Claim> claims, DateTime expiredAt)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var tokenDescriptor = new SecurityTokenDescriptor
         {
-            _userDomainService = userDomainService;
-            var jwtSettings = configuration.GetSection("JwtSettings");
-            _secretKey = jwtSettings["SecretKey"];
-            _issuer = jwtSettings["Issuer"];
-            _audience = jwtSettings["Audience"];
+            Subject = new ClaimsIdentity(claims),
+            Expires = expiredAt,
+            Issuer = _issuer,
+            Audience = _audience,
+            SigningCredentials = credentials
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+
+        return tokenHandler.WriteToken(token);
+    }
+
+    /// <summary>
+    /// Validates the given JWT token and extracts claims if valid.
+    /// </summary>
+    public ClaimsPrincipal? ValidateToken(string token, out bool isExpired)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+        var tokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = _issuer,
+            ValidAudience = _audience,
+            IssuerSigningKey = key,
+            ClockSkew = TimeSpan.Zero // Disable clock skew for immediate expiration checks
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        isExpired = false;
+
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
+
+            if (securityToken is JwtSecurityToken jwtToken &&
+                jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return principal;
+            }
+
+            throw new SecurityTokenException("Invalid token");
         }
-
-        public async Task<string> GenerateAccessToken(UserEntity userEntity, DateTime expiredAt)
+        catch (SecurityTokenExpiredException)
         {
-            var getRolesResult = await _userDomainService.GetRolesAsync(userEntity);
-            string[] roles = [];
-            if (getRolesResult.IsSuccess)
-            {
-                roles = getRolesResult.Value.ToArray();
-            }
-            
-            // Define claims for the token
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, userEntity.Id.ToString()),
-                new Claim(ClaimTypes.Name, userEntity.PhoneNumber),
-                
-            };
-
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role)); 
-            }
-
-            // Generate signing credentials using the secret key
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            // Create the JWT token
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = expiredAt,
-                Issuer = _issuer,
-                Audience = _audience,
-                SigningCredentials = credentials
-            };
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
-            // Return the serialized token
-            return tokenHandler.WriteToken(token);
+            isExpired = true;
+            return null;
+        }
+        catch
+        {
+            return null;
         }
     }
 }

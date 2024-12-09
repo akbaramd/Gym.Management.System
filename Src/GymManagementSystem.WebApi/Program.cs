@@ -4,7 +4,7 @@ using GymManagementSystem.Presentation.WebApi;
 // The modular builder initializes the application with the specified module as the entry point.
 // Note: This setup uses Autofac as the dependency injection (DI) container.
 var builder =
-    BonyanApplication.CreateModularBuilder<GymManagementSystemWebApiModule>("GymManagementSystem", args: args);
+  BonyanApplication.CreateModularBuilder<GymManagementSystemWebApiModule>("GymManagementSystem", args: args);
 
 // Add services to the container.
 // Additional services and configurations can be registered here if needed.

@@ -1,133 +1,158 @@
-﻿using GymManagementSystem.Domain.IdentityContext.RoleAggregate.Repositories;
-using GymManagementSystem.Domain.IdentityContext.UserAggregate;
-using GymManagementSystem.Domain.IdentityContext.UserAggregate.Repositories;
-using GymManagementSystem.Domain.IdentityContext.SessionAggregate;
-using System;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Bonyan.Layer.Domain.DomainService;
-using Bonyan.Layer.Domain.Services;
-using GymManagementSystem.Domain.IdentityContext.SessionAggregate.Repositories;
+﻿namespace GymManagementSystem.Domain.IdentityContext.DomainService;
 
-namespace GymManagementSystem.Domain.IdentityContext.DomainService;
-
-/// <summary>
-/// Domain service for user-related operations, including session management.
-/// </summary>
-public class AuthDomainService : BonDomainService
+public class AuthDomainService : BonDomainService, IBonUnitOfWorkEnabled
 {
-    private readonly IUserRepository _userRepository;
-    private readonly ISessionRepository _sessionRepository;
     private readonly IRoleRepository _roleRepository;
-
     private readonly TimeSpan _sessionExpirationDuration = TimeSpan.FromDays(30); // Example expiration duration
+    private readonly IUserRepository _userRepository;
 
-    public AuthDomainService(IUserRepository userRepository, ISessionRepository sessionRepository, IRoleRepository roleRepository)
+    public AuthDomainService(IUserRepository userRepository, IRoleRepository roleRepository)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
-        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _roleRepository = roleRepository ?? throw new ArgumentNullException(nameof(roleRepository));
     }
 
-    /// <summary>
-    /// Handles user login with session management.
-    /// </summary>
-    public async Task<BonDomainResult<SessionEntity>> LoginAsync(string phoneNumber, string password, string ipAddress, string browser)
+    public async Task<BonDomainResult<(UserEntity, UserSessionChildEntity)>> LoginAsync(string phoneNumber, string password, string ipAddress, string device)
     {
+        var ipAddressValue = new IpAddressValue(ipAddress);
+        var deviceValue = new DeviceValue(device);
         var user = await _userRepository.FindByPhoneNumberAsync(phoneNumber);
-        if (user == null)
+        if (user == null || !user.ComparePassword(password))
         {
-            return BonDomainResult<SessionEntity>.Failure("Invalid username or password.");
+            if (user != null)
+            {
+                user.IncrementFailedAttempts();
+                await _userRepository.UpdateAsync(user, true);
+            }
+
+            return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Failure("Invalid username or password.");
         }
 
         if (user.IsBanned())
         {
-            return BonDomainResult<SessionEntity>.Failure($"User is temporarily banned until {user.BanUntil.Value}.");
+            return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Failure($"User is temporarily banned until {user.BanUntil!.Value}.");
         }
 
-        if (!user.ComparePassword(password))
-        {
-            user.IncrementFailedAttempts();
-            await _userRepository.UpdateAsync(user, true);
-            return BonDomainResult<SessionEntity>.Failure("Invalid username or password.");
-        }
-
-        // Successful login
         user.ResetFailedAttempts();
 
+        var session = user.UserSessions
+            .FirstOrDefault(s => s.IpAddress == ipAddressValue && s.Device == deviceValue && s.Status == UserSessionStatus.Active);
 
-
-        // Check for an existing active session from the same IP and browser
-        var existingSession = user.Sessions.Select(x=>x.Session)
-            .FirstOrDefault(session => session.IpAddress == ipAddress && session.Device == browser );
-
-        if (existingSession != null)
+        if (session != null)
         {
-            // Reuse the existing active session
-            existingSession.Relogin();
-            await _sessionRepository.UpdateAsync(existingSession, true);
+            session.RefreshActivity();
         }
         else
         {
-            // Step 3: Create a new session if no existing active session is found
-            existingSession = new SessionEntity(ipAddress, browser);
-            await _sessionRepository.AddAsync(existingSession, true);
-
-            // Link the new session to the user in the UserSession table
-            user.AddSession(existingSession.Id);
+            session = user.AddSession(ipAddressValue, deviceValue);
         }
 
         await _userRepository.UpdateAsync(user, true);
 
-        return BonDomainResult<SessionEntity>.Success(existingSession);
+        return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Success((user, session));
     }
 
-
-    /// <summary>
-    /// Handles user logout and invalidates a specific session.
-    /// </summary>
-    public async Task<BonDomainResult<bool>> LogoutAsync( Guid sessionId)
+    public async Task<BonDomainResult<bool>> LogoutAsync(Guid userId, Guid sessionId)
     {
-        var session = await _sessionRepository.GetByIdAsync(sessionId);
-        if (session == null)
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
         {
-            return BonDomainResult<bool>.Failure("Session not found or does not belong to the user.");
+            return BonDomainResult<bool>.Failure("User not found.");
         }
 
-        session.EndSession();
-        await _sessionRepository.UpdateAsync(session, true);
+        try
+        {
+            user.EndSession(sessionId);
+            await _userRepository.UpdateAsync(user, true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BonDomainResult<bool>.Failure(ex.Message);
+        }
 
         return BonDomainResult<bool>.Success(true);
     }
 
-
-    /// <summary>
-    /// Generates a phone number OTP for a user and stores it in their token list.
-    /// </summary>
-    public async Task<BonDomainResult<string>> GeneratePhoneNumberOtpCode(UserEntity user)
+    public async Task<BonDomainResult<bool>> LogoutAllSessionsAsync(Guid userId)
     {
-        var code = GenerateOtp();
-        user.SetToken("phone-number-otp", code); // OTP expires in 5 minutes
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            return BonDomainResult<bool>.Failure("User not found.");
+        }
+
+        user.EndAllSessions();
         await _userRepository.UpdateAsync(user, true);
-        return BonDomainResult<string>.Success(code);
+
+        return BonDomainResult<bool>.Success(true);
     }
 
-    /// <summary>
-    /// Validates a phone number OTP for a user.
-    /// </summary>
-    public BonDomainResult<bool> ValidatePhoneNumberOtpCode(UserEntity user, string code)
+    public async Task<BonDomainResult<bool>> ValidateAndUpdateSessionAsync(Guid userId, Guid sessionId, bool isTokenExpired, string ipAddress, string device)
     {
-        var isValid = user.HasToken("phone-number-otp", code);
-        return BonDomainResult<bool>.Success(isValid);
+        var validationResult = await ValidateSessionInternalAsync(userId, sessionId, isTokenExpired);
+        if (validationResult.IsFailure)
+        {
+            return BonDomainResult<bool>.Failure(validationResult.ErrorMessage);
+        }
+
+        // If session is valid, update with new IP and device
+        var user = validationResult.Value.user;
+        var session = validationResult.Value.session;
+        session.UpdateDeviceAndIp(new IpAddressValue(ipAddress), new DeviceValue(device));
+        session.RefreshActivity();
+
+        await _userRepository.UpdateAsync(user, true);
+
+        return BonDomainResult<bool>.Success(true);
     }
 
-    /// <summary>
-    /// Generates a secure OTP code.
-    /// </summary>
-    private string GenerateOtp()
+    public async Task<BonDomainResult<bool>> ValidateSessionAsync(Guid userId, Guid sessionId, bool isTokenExpired)
     {
-        var random = new Random();
-        return random.Next(100000, 999999).ToString(); // Generates a 6-digit OTP
+        var validationResult = await ValidateSessionInternalAsync(userId, sessionId, isTokenExpired);
+        return validationResult.IsFailure
+            ? BonDomainResult<bool>.Failure(validationResult.ErrorMessage)
+            : BonDomainResult<bool>.Success(true);
+    }
+
+    private async Task<BonDomainResult<(UserEntity user, UserSessionChildEntity session)>> ValidateSessionInternalAsync(Guid userId, Guid sessionId, bool isTokenExpired)
+    {
+        // Step 1: Validate User Existence
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Failure("User not found.");
+        }
+
+        // Step 2: Validate Session Existence
+        var session = user.UserSessions.FirstOrDefault(s => s.Id == sessionId);
+        if (session == null)
+        {
+            return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Failure("Session not found.");
+        }
+
+        // Step 3: Handle Token Expiration
+        if (isTokenExpired)
+        {
+            user.EndSession(sessionId); // Expire the session due to token expiration
+            await _userRepository.UpdateAsync(user, true);
+            return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Failure("Session expired due to token expiration.");
+        }
+
+        // Step 4: Validate Session Status
+        if (session.Status != UserSessionStatus.Active)
+        {
+            return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Failure("Session is not active.");
+        }
+
+        // Step 5: Handle Inactivity Expiration
+        var maxInactivityDuration = TimeSpan.FromMinutes(30); // Example inactivity duration
+        if (session.IsExpired(maxInactivityDuration))
+        {
+            user.EndSession(sessionId); // Expire the session due to inactivity
+            await _userRepository.UpdateAsync(user, true);
+            return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Failure("Session expired due to inactivity.");
+        }
+
+        return BonDomainResult<(UserEntity, UserSessionChildEntity)>.Success((user, session));
     }
 }

@@ -7,11 +7,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Bonyan.Layer.Domain" Version="1.2.4" />
+        <PackageReference Include="Bonyan.Layer.Domain" Version="1.2.4"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\GymManagementSystem.Shared\GymManagementSystem.Shared.csproj" />
+        <ProjectReference Include="..\GymManagementSystem.Shared\GymManagementSystem.Shared.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="IdentityContext\SessionAggregate\" />
     </ItemGroup>
 
 </Project>

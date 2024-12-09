@@ -1,0 +1,13 @@
+﻿global using System.Reflection;
+global using Bonyan.EntityFrameworkCore;
+global using Bonyan.EntityFrameworkCore.Abstractions;
+global using Bonyan.Layer.Domain;
+global using GymManagementSystem.Domain.IdentityContext.PermissionAggregate;
+global using GymManagementSystem.Domain.IdentityContext.PermissionAggregate.Repositories;
+global using GymManagementSystem.Domain.IdentityContext.RoleAggregate;
+global using GymManagementSystem.Domain.IdentityContext.RoleAggregate.Repositories;
+global using GymManagementSystem.Domain.IdentityContext.SessionAggregate;
+global using GymManagementSystem.Domain.IdentityContext.UserAggregate;
+global using GymManagementSystem.Domain.IdentityContext.UserAggregate.Repositories;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore.Metadata.Builders;
